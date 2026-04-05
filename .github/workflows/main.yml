@@ -14,6 +14,7 @@ jobs:
         with:
           node-version: '24' 
       - run: npm install
+      - run: npm install @google/generative-ai@latest
       - run: npm start
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
