@@ -1,7 +1,9 @@
 const { default: makeWASocket, useMultiFileAuthState, fetchLatestBaileysVersion, DisconnectReason } = require('@whiskeysockets/baileys');
-const qrcode = require('qrcode-terminal');
 const pino = require('pino');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
+
+// 👇 आपका बॉट वाला नंबर यहाँ सेट कर दिया गया है
+const phoneNumber = "916375284235"; 
 
 console.log("🚀 Starting NexGen AI Bot Process...");
 
@@ -18,28 +20,35 @@ const userChats = {};
 async function startBot() {
     try {
         const { state, saveCreds } = await useMultiFileAuthState('auth_info');
-        
-        // WhatsApp का लेटेस्ट वर्ज़न फेच करना (यही उस Connection Failure को रोकेगा)
         const { version } = await fetchLatestBaileysVersion();
         console.log(`🌐 Using WhatsApp Version: ${version.join('.')}`);
 
         const sock = makeWASocket({
             version, 
             auth: state,
-            printQRInTerminal: false,
-            logger: pino({ level: 'silent' }), // फालतू लॉग्स हटा दिए ताकि QR साफ दिखे
-            browser: ["NexGen AI", "Chrome", "1"]
+            printQRInTerminal: false, 
+            logger: pino({ level: 'silent' }), 
+            browser: ["Ubuntu", "Chrome", "20.0.04"] 
         });
 
+        // 🌟 PAIRING CODE LOGIC 🌟
+        if (!sock.authState.creds.registered) {
+            setTimeout(async () => {
+                try {
+                    const code = await sock.requestPairingCode(phoneNumber);
+                    console.log('\n==================================================');
+                    console.log(`🔑 YOUR PAIRING CODE IS: ${code}`);
+                    console.log('📱 WhatsApp खोलें > Linked Devices > "Link with phone number" पर क्लिक करें');
+                    console.log('और यह 8-अक्षरों का कोड वहां डाल दें!');
+                    console.log('==================================================\n');
+                } catch (err) {
+                    console.log("❌ Pairing Code Error:", err.message);
+                }
+            }, 3000);
+        }
+
         sock.ev.on('connection.update', (update) => {
-            const { connection, qr, lastDisconnect } = update;
-            
-            if (qr) {
-                console.log('\n==================================================');
-                console.log('=== 👇 SCAN THIS QR CODE WITH WHATSAPP 👇 ===');
-                console.log('==================================================\n');
-                qrcode.generate(qr, { small: true });
-            }
+            const { connection, lastDisconnect } = update;
             
             if (connection === 'open') {
                 console.log('✅ AI BOT IS ONLINE AND READY!');
@@ -49,7 +58,6 @@ async function startBot() {
                 const shouldReconnect = (lastDisconnect.error)?.output?.statusCode !== DisconnectReason.loggedOut;
                 console.log('❌ Connection Closed. Reason:', lastDisconnect.error?.message);
                 
-                // अगर कनेक्शन कटता है, तो 5 सेकंड बाद खुद दोबारा ट्राई करेगा
                 if (shouldReconnect) {
                     console.log('🔄 Reconnecting in 5 seconds...');
                     setTimeout(startBot, 5000); 
