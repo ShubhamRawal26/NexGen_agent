@@ -2,7 +2,6 @@ const { default: makeWASocket, useMultiFileAuthState, fetchLatestBaileysVersion,
 const pino = require('pino');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 
-// 👇 आपका बॉट वाला नंबर यहाँ सेट कर दिया गया है
 const phoneNumber = "916375284235"; 
 
 console.log("🚀 Starting NexGen AI Bot Process...");
@@ -14,7 +13,11 @@ if (!process.env.GEMINI_API_KEY) {
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 const systemPrompt = `You are a friendly and expert sales assistant for a digital agency. Your job is to talk to clients on WhatsApp, answer their queries, tell them we make great websites and apps like Zomato, and close the deal. Reply concisely and professionally in Hinglish or English.`;
 
-const aiModel = genAI.getGenerativeModel({ model: "gemini-1.5-flash", systemInstruction: systemPrompt });
+// 🌟 यहाँ हमने 'latest' जोड़ दिया है ताकि 404 एरर न आए 🌟
+const aiModel = genAI.getGenerativeModel({ 
+    model: "gemini-1.5-flash-latest", 
+    systemInstruction: systemPrompt 
+});
 const userChats = {};
 
 async function startBot() {
@@ -31,7 +34,6 @@ async function startBot() {
             browser: ["Ubuntu", "Chrome", "20.0.04"] 
         });
 
-        // 🌟 PAIRING CODE LOGIC 🌟
         if (!sock.authState.creds.registered) {
             setTimeout(async () => {
                 try {
