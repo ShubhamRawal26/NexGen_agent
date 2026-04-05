@@ -1,23 +1,14 @@
 const { default: makeWASocket, useMultiFileAuthState, fetchLatestBaileysVersion, DisconnectReason } = require('@whiskeysockets/baileys');
 const pino = require('pino');
-const { OpenAI } = require('openai'); // Google हट गया, OpenAI (OpenRouter) आ गया
+const { OpenAI } = require('openai');
 
 const phoneNumber = "916375284235"; 
 
 console.log("🚀 Starting NexGen AI Bot with OpenRouter...");
 
-if (!process.env.OPENROUTER_API_KEY) {
-    console.log("❌ ERROR: OPENROUTER_API_KEY नहीं मिली!");
-}
-
-// OpenRouter का सेटअप
 const openai = new OpenAI({
     baseURL: "https://openrouter.ai/api/v1",
     apiKey: process.env.OPENROUTER_API_KEY,
-    defaultHeaders: {
-        "HTTP-Referer": "https://shubhamrawal.in", // आपका पोर्टफोलियो
-        "X-Title": "NexGen Digital"
-    }
 });
 
 const systemPrompt = `You are a friendly and expert sales assistant for a digital agency named NexGen Digital. Your job is to talk to clients on WhatsApp, answer their queries, tell them we make great websites and apps like Zomato, and close the deal. Reply concisely and professionally in Hinglish or English.`;
@@ -70,32 +61,34 @@ async function startBot() {
             const text = (msg.message.conversation || msg.message.extendedTextMessage?.text || "").trim();
             if (!text) return;
 
-            // अगर यूजर पहली बार मैसेज कर रहा है, तो सिस्टम प्रॉम्प्ट सेट करें
             if (!userChats[sender]) {
-                userChats[sender] = [
-                    { role: "system", content: systemPrompt }
-                ];
+                userChats[sender] = [{ role: "system", content: systemPrompt }];
             }
 
-            // यूजर का नया मैसेज हिस्ट्री में डालें
             userChats[sender].push({ role: "user", content: text });
 
             try {
-                // OpenRouter से रिप्लाई जनरेट करवाएं
                 const completion = await openai.chat.completions.create({
-                    model: "meta-llama/llama-3-8b-instruct:free", // OpenRouter का फ्री मॉडल
+                    // 🌟 UPDATED MODEL ID HERE 🌟
+                    model: "meta-llama/llama-3.1-8b-instruct:free", 
                     messages: userChats[sender],
                 });
 
                 const reply = completion.choices[0].message.content;
-                
-                // AI का रिप्लाई हिस्ट्री में सेव करें ताकि उसे पिछली बातें याद रहें
                 userChats[sender].push({ role: "assistant", content: reply });
-
-                // WhatsApp पर मैसेज भेजें
                 await sock.sendMessage(sender, { text: reply });
             } catch (error) {
                 console.log("🔥 AI Error:", error.message);
+                // अगर फिर भी मॉडल एरर आए, तो इस बैकअप मॉडल को ट्राई करेगा
+                if(error.message.includes('404')) {
+                    console.log("🔄 Trying Backup Model...");
+                    const backupCompletion = await openai.chat.completions.create({
+                        model: "mistralai/mistral-7b-instruct:free",
+                        messages: userChats[sender],
+                    });
+                    const backupReply = backupCompletion.choices[0].message.content;
+                    await sock.sendMessage(sender, { text: backupReply });
+                }
             }
         });
 
