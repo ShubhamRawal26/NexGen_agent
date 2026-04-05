@@ -7,7 +7,7 @@
     "start": "node index.js"
   },
   "dependencies": {
-    "@google/generative-ai": "^0.2.1",
+    "@google/generative-ai": "latest",
     "@whiskeysockets/baileys": "^6.6.0",
     "pino": "^8.19.0",
     "qrcode-terminal": "^0.12.0"
