@@ -1,13 +1,13 @@
 {
   "name": "ai-whatsapp-bot",
   "version": "1.0.0",
-  "description": "AI WhatsApp Sales Agent",
+  "description": "AI WhatsApp Sales Agent via OpenRouter",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"
   },
   "dependencies": {
-    "@google/generative-ai": "latest",
+    "openai": "^4.0.0",
     "@whiskeysockets/baileys": "^6.6.0",
     "pino": "^8.19.0",
     "qrcode-terminal": "^0.12.0"
