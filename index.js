@@ -13,9 +13,9 @@ if (!process.env.GEMINI_API_KEY) {
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 const systemPrompt = `You are a friendly and expert sales assistant for a digital agency. Your job is to talk to clients on WhatsApp, answer their queries, tell them we make great websites and apps like Zomato, and close the deal. Reply concisely and professionally in Hinglish or English.`;
 
-// 🌟 यहाँ हमने 'latest' जोड़ दिया है ताकि 404 एरर न आए 🌟
+// 🌟 ओरिजिनल और सबसे फ़ास्ट मॉडल का नाम 🌟
 const aiModel = genAI.getGenerativeModel({ 
-    model: "gemini-1.5-flash-latest", 
+    model: "gemini-1.5-flash", 
     systemInstruction: systemPrompt 
 });
 const userChats = {};
