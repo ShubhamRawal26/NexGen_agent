@@ -3,7 +3,7 @@ name: Run AI Bot
 on:
   workflow_dispatch:
   schedule:
-    - cron: '0 */4 * * *' # हर 4 घंटे में रीस्टार्ट
+    - cron: '0 */4 * * *'
 
 jobs:
   build:
@@ -12,7 +12,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '24' 
       - run: npm install
       - run: npm start
         env:
