@@ -1,38 +1,33 @@
-const { default: makeWASocket, useMultiFileAuthState } = require('@whiskeysockets/baileys');
+const { default: makeWASocket, useMultiFileAuthState, fetchLatestBaileysVersion, DisconnectReason } = require('@whiskeysockets/baileys');
 const qrcode = require('qrcode-terminal');
 const pino = require('pino');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 
 console.log("🚀 Starting NexGen AI Bot Process...");
 
-// API Key चेक करना
 if (!process.env.GEMINI_API_KEY) {
-    console.log("❌ ERROR: GEMINI_API_KEY नहीं मिली! GitHub Secrets चेक करें।");
-} else {
-    console.log("✅ API Key Loaded Successfully!");
+    console.log("❌ ERROR: GEMINI_API_KEY नहीं मिली!");
 }
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-const systemPrompt = `You are a friendly and expert sales assistant for a digital agency. 
-Your job is to talk to clients on WhatsApp, answer their queries, tell them we make great websites and apps like Zomato, and close the deal. 
-Reply concisely and professionally in Hinglish or English.`;
+const systemPrompt = `You are a friendly and expert sales assistant for a digital agency. Your job is to talk to clients on WhatsApp, answer their queries, tell them we make great websites and apps like Zomato, and close the deal. Reply concisely and professionally in Hinglish or English.`;
 
-const aiModel = genAI.getGenerativeModel({ 
-    model: "gemini-1.5-flash",
-    systemInstruction: systemPrompt
-});
-
+const aiModel = genAI.getGenerativeModel({ model: "gemini-1.5-flash", systemInstruction: systemPrompt });
 const userChats = {};
 
 async function startBot() {
     try {
-        console.log("📂 Setting up Auth Data...");
         const { state, saveCreds } = await useMultiFileAuthState('auth_info');
+        
+        // WhatsApp का लेटेस्ट वर्ज़न फेच करना (यही उस Connection Failure को रोकेगा)
+        const { version } = await fetchLatestBaileysVersion();
+        console.log(`🌐 Using WhatsApp Version: ${version.join('.')}`);
 
         const sock = makeWASocket({
+            version, 
             auth: state,
             printQRInTerminal: false,
-            logger: pino({ level: 'info' }), // यहाँ हमने silent को info कर दिया है ताकि हर गतिविधि दिखे
+            logger: pino({ level: 'silent' }), // फालतू लॉग्स हटा दिए ताकि QR साफ दिखे
             browser: ["NexGen AI", "Chrome", "1"]
         });
 
@@ -51,7 +46,14 @@ async function startBot() {
             }
             
             if (connection === 'close') {
-                console.log('❌ Connection Closed. Reason:', lastDisconnect?.error);
+                const shouldReconnect = (lastDisconnect.error)?.output?.statusCode !== DisconnectReason.loggedOut;
+                console.log('❌ Connection Closed. Reason:', lastDisconnect.error?.message);
+                
+                // अगर कनेक्शन कटता है, तो 5 सेकंड बाद खुद दोबारा ट्राई करेगा
+                if (shouldReconnect) {
+                    console.log('🔄 Reconnecting in 5 seconds...');
+                    setTimeout(startBot, 5000); 
+                }
             }
         });
 
@@ -65,8 +67,6 @@ async function startBot() {
             const text = (msg.message.conversation || msg.message.extendedTextMessage?.text || "").trim();
             if (!text) return;
 
-            console.log(`📩 New Message from ${sender}: ${text}`);
-
             if (!userChats[sender]) {
                 userChats[sender] = aiModel.startChat({ history: [] });
             }
@@ -75,7 +75,7 @@ async function startBot() {
                 const response = await userChats[sender].sendMessage(text);
                 await sock.sendMessage(sender, { text: response.response.text() });
             } catch (error) {
-                console.log("🔥 AI Request Error:", error);
+                console.log("🔥 AI Error:", error);
             }
         });
 
